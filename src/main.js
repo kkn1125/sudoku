@@ -99,11 +99,16 @@ function isFullNumbers(array) {
 }
 
 function checkRow() {
+  for(let row in tileList) {
+
+  }
   tileList.forEach((row) => {
     console.log(isFullNumbers(row));
   });
 }
+
 checkRow();
+
 function checkColumn() {}
 
 function tiles() {
