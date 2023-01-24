@@ -82,17 +82,17 @@ function rayPoint() {
   }
 }
 
-function getBlock() {
+function getBlock(x, y) {
   const temp = [];
-  for (let i = 0; i < 3; i++) {
-    temp.push(tileList[i][0]);
-    temp.push(tileList[i][1]);
-    temp.push(tileList[i][2]);
+  for (let i = x * 3; i < (x + 1) * 3; i++) {
+    temp.push(tileList[i][y * 3]);
+    temp.push(tileList[i][y * 3 + 1]);
+    temp.push(tileList[i][y * 3 + 2]);
   }
   return temp;
 }
 
-console.log('block', isFullNumbers(getBlock()))
+console.log("block", isFullNumbers(getBlock(0,0)));
 
 function isFullNumbers(array) {
   return !array.reduce((acc, cur) => acc - cur, 45);
