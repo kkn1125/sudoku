@@ -37,19 +37,96 @@ const currentPoint = {
 };
 
 window.addEventListener("mousemove", (e) => {
-  const x = e.screenX;
-  const y = e.screenY;
+  const x = e.clientX;
+  const y = e.clientY;
   // rayPoint(x, y);
   currentPoint.x = x;
   currentPoint.y = y;
 });
 
+const tileNumbers = new Map([
+  [1, 9],
+  [2, 9],
+  [3, 9],
+  [4, 9],
+  [5, 9],
+  [6, 9],
+  [7, 9],
+  [8, 9],
+  [9, 9],
+]);
+
+function tileCountUp(key) {
+  if (tileNumbers.get(key) < 9) {
+    tileNumbers.set(key, tileNumbers.get(key) + 1);
+  }
+}
+function tileCountDown(key) {
+  if (tileNumbers.get(key) > 0) {
+    tileNumbers.set(key, tileNumbers.get(key) - 1);
+  }
+}
+
+function fillNumbers(list, suffle = false) {
+  // const temp = [];
+  for (let i = 0; i < list.length; i++) {
+    // if (!temp[i]) {
+    //   temp[i] = [];
+    // }
+    for (let j = 0; j < list[i].length; j++) {
+      // if (!temp[i][j]) {
+      //   temp[i][j] = 0;
+      // }
+      if (list[i][j] !== 0) {
+        tileCountDown(list[i][j]);
+        continue;
+      } else {
+        const key =
+          (suffle
+            ? parseInt((Math.random() * tileNumbers.size).toString())
+            : j) + 1;
+        // console.log(key);
+        // console.log(i, j);
+        // console.log(isFitNumberInRow(i, key));
+        // console.log(isFitNumberInColumn(j, key));
+        const [rowFit, rowNumbers] = isFitNumberInRow(i, key);
+        const [columnFit, columnNumbers] = isFitNumberInColumn(j, key);
+        console.log(key, rowFit, rowNumbers, columnFit, columnNumbers);
+        if (rowFit && columnFit) {
+          // const count = tileNumbers.get(key) - 1;
+          // tileNumbers.set(key, count);
+          tileCountDown(key);
+          list[i][j] = key;
+        } else {
+          const sameNumber = findSameNumber(rowNumbers, columnNumbers);
+          if (sameNumber) {
+            tileCountDown(sameNumber);
+            list[i][j] = sameNumber;
+          }
+        }
+      }
+      // return key;
+    }
+  }
+  return list;
+  // return list.map((row) =>
+  //   row.map((tile, i) => {
+  //     const key =
+  //       (suffle
+  //         ? parseInt((Math.random() * tileNumbers.size()).toString())
+  //         : i) + 1;
+  //     const count = tileNumbers.get(key) - 1;
+  //     tileNumbers.set(key, count);
+  //     return key;
+  //   })
+  // );
+}
+
+console.log(fillNumbers(tileList, true));
+
 function rayPoint() {
   const left = canvas.width / 2 - (tileList.length / 2) * TILE_SIZE_X;
-  const top =
-    TILE_SIZE_Y * 2 +
-    canvas.height / 2 -
-    (tileList[0].length / 2) * TILE_SIZE_Y;
+  const top = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
   const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
   const bottom = top + TILE_SIZE_Y * HEIGHT * BLOCK_HEIGHT;
   const indexX = parseInt(
@@ -58,6 +135,8 @@ function rayPoint() {
   const indexY = parseInt(
     ((currentPoint.y - top) / (bottom - top)) * (HEIGHT * BLOCK_HEIGHT)
   );
+  // console.log(left, top)
+  // console.log(currentPoint.x, currentPoint.y)
   if (
     left < currentPoint.x &&
     top < currentPoint.y &&
@@ -92,24 +171,65 @@ function getBlock(x, y) {
   return temp;
 }
 
-console.log("block", isFullNumbers(getBlock(0,0)));
+console.log("block", isFullNumbers(getBlock(0, 0)));
 
+function findSameNumber(a, b) {
+  const max = a.length > b.length ? a : b;
+  const min = a.length < b.length ? a : b;
+
+  for (let i of max) {
+    if (min.includes(max[i])) {
+      return max[i];
+    }
+  }
+  return null;
+}
+
+// y번 행에 숫자가 들어가도 되는지
+function isFitNumberInRow(y, number) {
+  const isFit = tileList[y].includes(number);
+  const numbers = tileList[y].filter((tile) => tile !== number);
+  return [isFit, numbers];
+}
+
+// x번 열에 숫자가 들어가도 되는지
+function isFitNumberInColumn(x, number) {
+  const numbers = [];
+  let isFit = true;
+  for (let row of tileList) {
+    if (row[x] !== number) {
+      numbers.push(row[x]);
+    } else {
+      isFit = false;
+    }
+  }
+  return [isFit, numbers];
+}
+
+// 숫자가 올바르게 가득 찼는지
 function isFullNumbers(array) {
   return !array.reduce((acc, cur) => acc - cur, 45);
 }
 
-function checkRow() {
-  for(let row in tileList) {
-
-  }
-  tileList.forEach((row) => {
-    console.log(isFullNumbers(row));
-  });
+// y번 행에 모든 숫자가 올바르게 가득 찼는지
+function isCorrectRow(y = 0) {
+  // for (let row of tileList) {
+  return isFullNumbers(tileList[y]);
+  // }
 }
 
-checkRow();
+// x번 열에 모든 숫자가 올바르게 가득 찼는지
+function isCorrectColumn(x = 0) {
+  const temp = [];
+  for (let row of tileList) {
+    temp.push(row[x]);
+  }
+  return isFullNumbers(temp);
+}
 
-function checkColumn() {}
+// console.log(isCorrectRow(0));
+// console.log(isCorrectColumn(0));
+// console.log(isFitNumberInColumn(0, 5));
 
 function tiles() {
   for (let y in tileList) {
