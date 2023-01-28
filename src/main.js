@@ -1,3 +1,5 @@
+import { Tile } from "./tile";
+
 const $ = (el) => document.querySelector(el);
 /** @type {HTMLElement} */
 const app = $("#app");
@@ -21,20 +23,114 @@ const BLOCK_HEIGHT = 3;
 const TILE_SIZE_X = 50;
 const TILE_SIZE_Y = 50;
 const tileList = /* new Array(WIDTH * BLOCK_WIDTH).fill(
-  new Array(HEIGHT * BLOCK_HEIGHT).fill(0)
+  new Array(HEIGHT * BLOCK_HEIGHT).fill(new Tile())
 ); */ [
-  [0, 0, 1, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [
+    new Tile(),
+    new Tile(),
+    new Tile(1, true),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
+  [
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
+  [
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
 
-  [0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 2, 5, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
+  [
+    new Tile(),
+    new Tile(2, true),
+    new Tile(5, true),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
+  [
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
 
-  [0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
+  [
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
+  [
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+    new Tile(),
+  ],
 ];
+
+const saveTileList = tileList.map((row) =>
+  row.map((oldTile) => new Tile().copy(oldTile))
+);
 
 // 기본 스도쿠 출력 넘버 배열
 const NUMBER_RESOURCES = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -49,9 +145,11 @@ const SELECTED_COLOR = "#84253240";
 // 선택한 숫자와 같은 수 마킹 컬러
 const SAME_NUMBER_MARK_COLOR = "#84253230";
 // 해당 숫자 모두 사용했을 때 컬러
-const EMPTY_NUMBER_COLOR = "#00000020";
+const EMPTY_NUMBER_COLOR = "#00000070";
 // 초기화 컬러
 const INITIAL_COLOR = "#000000";
+// 초기화 컬러
+const NEW_VALUE_COLOR = "#009922";
 // stroke color
 const STROKE_COLOR = "#777777";
 // font size
@@ -70,6 +168,9 @@ window.addEventListener("mousemove", (e) => {
   currentPoint.x = x;
   currentPoint.y = y;
 });
+
+const INSERT_WRONG_LIMIT = 3;
+let wrongCount = 0;
 
 const tileNumbers = new Map([
   [1, 9],
@@ -107,8 +208,8 @@ function validation(list) {
   tileNumberCompares = new Map(tileNumbers.entries());
   for (let i = 0; i < list.length; i++) {
     for (let j = 0; j < list[i].length; j++) {
-      if (list[i][j] > 0) {
-        tileCountDown(list[i][j]);
+      if (list[i][j].number > 0) {
+        tileCountDown(list[i][j].number);
       }
     }
   }
@@ -133,7 +234,8 @@ function fillNumbers(list, suffle = false) {
 // row 적합 검증
 function isCorrectInRow(y, number) {
   // 에러처리 나중에
-  const isFitRow = !tileList[y].includes(number);
+  const isFitRow =
+    tileList[y].findIndex((tile) => tile.number === number) === -1;
   const restNumbers = substraction(tileList[y]);
   return [isFitRow, restNumbers];
 }
@@ -144,7 +246,7 @@ function isCorrectInColumn(x, number) {
   for (let tile of tileList) {
     temp.push(tile[x]);
   }
-  const isFitColumn = !temp.includes(number);
+  const isFitColumn = temp.findIndex((tile) => tile.number === number) === -1;
   const restNumbers = substraction(temp);
   return [isFitColumn, restNumbers];
 }
@@ -152,7 +254,7 @@ function isCorrectInColumn(x, number) {
 // block 적합 검증
 function isCorrectInBlock(y, x, number) {
   const temp = getBlock(y, x);
-  const isFitBlock = !temp.includes(number);
+  const isFitBlock = temp.findIndex((tile) => tile.number === number) === -1;
   const restNumbers = substraction(temp);
   return [isFitBlock, restNumbers];
 }
@@ -443,7 +545,7 @@ function tiles() {
 
       /* wrong marker */
       if (wrongNumber) {
-        if (row[x] === wrongNumber) {
+        if (row[x].number === wrongNumber) {
           ctx.fillStyle = WRONG_COLOR;
           ctx.fillRect(
             x * TILE_SIZE_X + baseX,
@@ -458,8 +560,8 @@ function tiles() {
       /* selected marker */
       if (
         selected &&
-        row[x] !== 0 &&
-        row[x] === tileList[selected[1]][selected[0]]
+        row[x].number !== 0 &&
+        row[x].number === tileList[selected[1]][selected[0]].number
       ) {
         ctx.fillStyle = SAME_NUMBER_MARK_COLOR;
         ctx.fillRect(
@@ -491,10 +593,10 @@ function tiles() {
       );
 
       /* text in tile */
-      if (tile !== 0) {
-        ctx.strokeStyle = INITIAL_COLOR;
+      if (tile.number !== 0) {
+        ctx.fillStyle = tile.origin ? INITIAL_COLOR : NEW_VALUE_COLOR;
         ctx.fillText(
-          tile,
+          tile.number,
           x * TILE_SIZE_X + baseX + TILE_SIZE_X / 2,
           y * TILE_SIZE_Y + baseY + TILE_SIZE_Y / 2 + FONT_SIZE / 3
         );
@@ -504,6 +606,24 @@ function tiles() {
   }
   /* validation for tile counter */
   validation(tileList);
+}
+
+function scoreBoard() {
+  const left = canvas.width / 2 - (tileList.length / 2) * TILE_SIZE_X;
+  const top = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
+  const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
+  const bottom = top + TILE_SIZE_Y * HEIGHT * BLOCK_HEIGHT;
+  const score = `${wrongCount}/${INSERT_WRONG_LIMIT}`;
+  const PADDING = 20;
+  const topPlace = 45;
+
+  ctx.strokeRect(
+    canvas.width / 2 - (score.length * FONT_SIZE) / 2 - PADDING / 2,
+    topPlace - FONT_SIZE - PADDING / 3,
+    score.length * FONT_SIZE + PADDING,
+    FONT_SIZE + PADDING
+  );
+  ctx.fillText(score, canvas.width / 2, topPlace);
 }
 
 function clearBoard() {
@@ -518,8 +638,22 @@ function render(time) {
   rayPoint();
   tiles();
   numberPad();
+  scoreBoard();
 }
 requestAnimationFrame(render);
+
+function initialTileList() {
+  for (let y in tileList) {
+    tileList[y] = saveTileList[y].map((oldTile) => new Tile().copy(oldTile));
+  }
+  correctNumber = null;
+  correctPlace = null;
+  onSelectTile = null;
+  selected = null;
+  wrongNumber = null;
+  wrongPlace = null;
+  wrongCount = 0;
+}
 
 /* canvas sizing */
 canvas.width = innerWidth;
@@ -529,8 +663,83 @@ window.addEventListener("resize", (e) => {
   canvas.width = innerWidth;
   canvas.height = innerHeight;
 });
+window.addEventListener("keydown", (e) => {
+  const key = e.key;
+  if (key.match(/[1-9]/g)) {
+    onSelectTile = Number(key) - 1;
+    try {
+      if (correctNumber) {
+        /* correct 초기화 */
+        correctNumber = null;
+        correctPlace = null;
+      }
+
+      const [x, y] = selected;
+      const newTile = NUMBER_RESOURCES[onSelectTile];
+      if (totalCorrectInPlace(y, x, newTile) || newTile === tileList[y][x]) {
+        if (tileList[y][x].origin) {
+          alert("고정 값은 변경할 수 없습니다.");
+        } else {
+          tileList[y][x].setNumber(newTile);
+          onSelectTile = null;
+          selected = null;
+          wrongNumber = null;
+          wrongPlace = null;
+
+          /* correct 값, 좌표 저장 */
+          correctNumber = newTile;
+          correctPlace = [y, x];
+        }
+      } else {
+        if (tileList[y][x].origin) {
+          // 고정 값 변경 시도 후 재시도 시 에러 표시 위함
+          // selected = null;
+          wrongNumber = newTile;
+          wrongPlace = [y, x];
+          onSelectTile = null;
+          alert("고정 값은 변경할 수 없습니다.");
+        } else {
+          console.log(tileList[y][x]);
+          console.log("잘못된 수");
+
+          wrongNumber = newTile;
+          wrongPlace = [y, x];
+          onSelectTile = null;
+
+          wrongCount += 1;
+          if (wrongCount >= INSERT_WRONG_LIMIT) {
+            alert("game over\n You lose!");
+            initialTileList();
+          }
+        }
+      }
+
+      // if (onTile) {
+      //   // console.log("tile click", onTile, tileList[y][x]);
+      //   selected = onTile;
+      //   console.log(selected);
+      //   wrongNumber = null;
+      //   wrongPlace = null;
+      // } else {
+      if (onSelectTile) {
+        selected = null;
+      }
+      // }
+
+      if (selected && isDeletion) {
+        tileList[selected[1]][selected[0]].deleteNumber();
+        isDeletion = false;
+        selected = null;
+        onSelectTile = null;
+        wrongNumber = null;
+        wrongPlace = null;
+      }
+    } catch (e) {
+      console.log("에러 확인");
+    }
+  }
+});
 window.addEventListener("click", (e) => {
-  // const target = e.target;
   try {
     if (correctNumber) {
       /* correct 초기화 */
@@ -542,25 +751,45 @@ window.addEventListener("click", (e) => {
       const [x, y] = selected;
       const newTile = NUMBER_RESOURCES[onSelectTile];
       if (totalCorrectInPlace(y, x, newTile) || newTile === tileList[y][x]) {
-        tileList[y][x] = newTile;
-        onSelectTile = null;
-        selected = null;
-        wrongNumber = null;
-        wrongPlace = null;
+        if (tileList[y][x].origin) {
+          alert("고정 값은 변경할 수 없습니다");
+        } else {
+          tileList[y][x].setNumber(newTile);
+          onSelectTile = null;
+          selected = null;
+          wrongNumber = null;
+          wrongPlace = null;
 
-        /* correct 값, 좌표 저장 */
-        correctNumber = newTile;
-        correctPlace = [y, x];
+          /* correct 값, 좌표 저장 */
+          correctNumber = newTile;
+          correctPlace = [y, x];
+        }
       } else {
-        console.log("잘못된 수");
-        wrongNumber = newTile;
-        wrongPlace = [y, x];
-        onSelectTile = null;
+        if (tileList[y][x].origin) {
+          // 고정 값 변경 시도 후 재시도 시 에러 표시 위함
+          // selected = null;
+          wrongNumber = newTile;
+          wrongPlace = [y, x];
+          onSelectTile = null;
+          alert("고정 값은 변경할 수 없습니다.");
+        } else {
+          console.log(tileList[y][x]);
+          console.log("잘못된 수");
+
+          wrongNumber = newTile;
+          wrongPlace = [y, x];
+          onSelectTile = null;
+
+          wrongCount += 1;
+          if (wrongCount >= INSERT_WRONG_LIMIT) {
+            alert("game over\n You lose!");
+            initialTileList();
+          }
+        }
       }
     }
 
     if (onTile) {
-      // console.log("tile click", onTile, tileList[y][x]);
       selected = onTile;
       console.log(selected);
       wrongNumber = null;
@@ -572,8 +801,7 @@ window.addEventListener("click", (e) => {
     }
 
     if (selected && isDeletion) {
-      // console.log(selected, tileList[selected[0]][selected[1]], isDeletion);
-      tileList[selected[1]][selected[0]] = 0;
+      tileList[selected[1]][selected[0]].deleteNumber();
       isDeletion = false;
       selected = null;
       onSelectTile = null;
