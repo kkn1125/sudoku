@@ -56,6 +56,8 @@ const INITIAL_COLOR = "#000000";
 const STROKE_COLOR = "#777777";
 // font size
 const FONT_SIZE = 16;
+// PAD RATIO
+const PAD_RATIO = 0.06;
 
 const currentPoint = {
   x: 0,
@@ -86,6 +88,13 @@ let tileNumberCompares = new Map(tileNumbers.entries());
 // 잘못된 값 좌표
 let wrongNumber = null;
 let wrongPlace = null;
+
+// 옳은 값 좌표
+let correctNumber = null;
+let correctPlace = null;
+
+// 삭제 여부
+let isDeletion = false;
 
 function tileCountDown(key) {
   if (tileNumberCompares.get(key) > 0) {
@@ -187,7 +196,7 @@ function substraction(array) {
 // console.log(tileNumberCompares);
 
 function rayPoint() {
-  const PAD_FROM_RIGHT = canvas.width * 0.05;
+  const PAD_FROM_RIGHT = canvas.width * PAD_RATIO;
   const left = canvas.width / 2 - (tileList.length / 2) * TILE_SIZE_X;
   const top = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
   const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
@@ -198,14 +207,6 @@ function rayPoint() {
   const indexY = parseInt(
     ((currentPoint.y - top) / (bottom - top)) * (HEIGHT * BLOCK_HEIGHT)
   );
-  // const indexSelectX = parseInt(
-  //   ((currentPoint.x - right + PAD_FROM_RIGHT) /
-  //     (right + PAD_FROM_RIGHT + TILE_SIZE_X - right + PAD_FROM_RIGHT)) *
-  //     (WIDTH * BLOCK_WIDTH)
-  // );
-  // const indexSelectY = parseInt(
-  //   ((currentPoint.y - top) / (bottom - top)) * (HEIGHT * BLOCK_HEIGHT)
-  // );
   if (
     left < currentPoint.x &&
     top < currentPoint.y &&
@@ -276,6 +277,20 @@ function rayPoint() {
     }
   }
 
+  /* detect delection button */
+  if (
+    right + PAD_FROM_RIGHT - TILE_SIZE_X < currentPoint.x &&
+    top < currentPoint.y &&
+    right + PAD_FROM_RIGHT > currentPoint.x &&
+    top + TILE_SIZE_Y > currentPoint.y
+  ) {
+    if (!isDeletion) {
+      isDeletion = true;
+    }
+  } else {
+    isDeletion = false;
+  }
+
   // sudoku pad or numbers pad hovering action
   if (
     (left < currentPoint.x &&
@@ -285,7 +300,11 @@ function rayPoint() {
     (right + PAD_FROM_RIGHT < currentPoint.x &&
       top < currentPoint.y &&
       right + PAD_FROM_RIGHT + TILE_SIZE_X > currentPoint.x &&
-      bottom > currentPoint.y)
+      bottom > currentPoint.y) ||
+    (right + PAD_FROM_RIGHT - TILE_SIZE_X < currentPoint.x &&
+      top < currentPoint.y &&
+      right + PAD_FROM_RIGHT > currentPoint.x &&
+      top + TILE_SIZE_Y > currentPoint.y)
   ) {
     document.body.style.cursor = "pointer";
   } else {
@@ -302,7 +321,29 @@ function numberPad() {
   const top = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
   const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
   const bottom = top + TILE_SIZE_Y * HEIGHT * BLOCK_HEIGHT;
-  const PAD_FROM_RIGHT = canvas.width * 0.05;
+
+  // 숫자 패드 스도쿠 간격 조절
+  const PAD_FROM_RIGHT = canvas.width * 0.06;
+
+  // number delete button
+  ctx.fillStyle = WRONG_COLOR;
+  ctx.fillRect(
+    right + PAD_FROM_RIGHT - TILE_SIZE_X,
+    top,
+    TILE_SIZE_X,
+    TILE_SIZE_Y
+  );
+  ctx.fillStyle = INITIAL_COLOR;
+  ctx.textAlign = "center";
+  ctx.font = `${FONT_SIZE}px bold`;
+  ctx.fillText(
+    "❌",
+    right + PAD_FROM_RIGHT - TILE_SIZE_X + TILE_SIZE_X / 2,
+    top + TILE_SIZE_Y / 2 + FONT_SIZE / 3
+  );
+  ctx.font = `${FONT_SIZE - 6}px bold`;
+
+  ctx.fillStyle = INITIAL_COLOR;
   for (let index in sortedNumbers) {
     const number = sortedNumbers[index];
     if (tileNumberCompares.get(number) === 0) {
@@ -356,30 +397,42 @@ function tiles() {
     );
     ctx.fillStyle = INITIAL_COLOR;
   }
+  // insert correct marking
+  if (correctNumber && correctPlace) {
+    ctx.fillStyle = CORRECT_COLOR;
+    ctx.fillRect(
+      correctPlace[1] * TILE_SIZE_X + baseX,
+      correctPlace[0] * TILE_SIZE_Y + baseY,
+      TILE_SIZE_X,
+      TILE_SIZE_Y
+    );
+    ctx.fillStyle = INITIAL_COLOR;
+  }
 
-  // if (wrongPlace) {
-  //   ctx.fillStyle = WRONG_COLOR;
-  //   /* row marker */
-  //   ctx.fillRect(
-  //     left,
-  //     Number(wrongPlace[0]) * TILE_SIZE_Y +
-  //       canvas.height / 2 -
-  //       (tileList[0].length / 2) * TILE_SIZE_Y,
-  //     right - left,
-  //     TILE_SIZE_Y
-  //   );
+  /* 틀린 부분의 좌표에서 row, column 표시 */
+  if (wrongPlace) {
+    ctx.fillStyle = WRONG_COLOR;
+    /* row marker */
+    ctx.fillRect(
+      left,
+      Number(wrongPlace[0]) * TILE_SIZE_Y +
+        canvas.height / 2 -
+        (tileList[0].length / 2) * TILE_SIZE_Y,
+      right - left,
+      TILE_SIZE_Y
+    );
 
-  //   /* column marker */
-  //   ctx.fillRect(
-  //     Number(wrongPlace[1]) * TILE_SIZE_X +
-  //       canvas.width / 2 -
-  //       (tileList.length / 2) * TILE_SIZE_X,
-  //     top,
-  //     TILE_SIZE_X,
-  //     bottom - top
-  //   );
-  //   ctx.fillStyle = INITIAL_COLOR;
-  // }
+    /* column marker */
+    ctx.fillRect(
+      Number(wrongPlace[1]) * TILE_SIZE_X +
+        canvas.width / 2 -
+        (tileList.length / 2) * TILE_SIZE_X,
+      top,
+      TILE_SIZE_X,
+      bottom - top
+    );
+    ctx.fillStyle = INITIAL_COLOR;
+  }
 
   for (let y in tileList) {
     const row = tileList[y];
@@ -479,6 +532,12 @@ window.addEventListener("resize", (e) => {
 window.addEventListener("click", (e) => {
   // const target = e.target;
   try {
+    if (correctNumber) {
+      /* correct 초기화 */
+      correctNumber = null;
+      correctPlace = null;
+    }
+
     if (onSelectTile !== null) {
       const [x, y] = selected;
       const newTile = NUMBER_RESOURCES[onSelectTile];
@@ -488,6 +547,10 @@ window.addEventListener("click", (e) => {
         selected = null;
         wrongNumber = null;
         wrongPlace = null;
+
+        /* correct 값, 좌표 저장 */
+        correctNumber = newTile;
+        correctPlace = [y, x];
       } else {
         console.log("잘못된 수");
         wrongNumber = newTile;
@@ -506,6 +569,16 @@ window.addEventListener("click", (e) => {
       if (onSelectTile) {
         selected = null;
       }
+    }
+
+    if (selected && isDeletion) {
+      // console.log(selected, tileList[selected[0]][selected[1]], isDeletion);
+      tileList[selected[1]][selected[0]] = 0;
+      isDeletion = false;
+      selected = null;
+      onSelectTile = null;
+      wrongNumber = null;
+      wrongPlace = null;
     }
   } catch (e) {
     console.log("에러 확인");
