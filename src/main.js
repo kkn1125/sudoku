@@ -6,6 +6,11 @@ const canvas = document.createElement("canvas");
 /** @type {CanvasRenderingContext2D } */
 const ctx = canvas.getContext("2d");
 
+/* clickable */
+let onTile = null;
+let onSelectTile = null;
+let selected = null;
+
 app.insertAdjacentElement("beforeend", canvas);
 
 /* animation */
@@ -18,18 +23,39 @@ const TILE_SIZE_Y = 50;
 const tileList = /* new Array(WIDTH * BLOCK_WIDTH).fill(
   new Array(HEIGHT * BLOCK_HEIGHT).fill(0)
 ); */ [
-  [1, 2, 3, 4, 5, 6, 7, 8, 9],
-  [4, 5, 6, 3, 0, 0, 0, 1, 0],
-  [7, 8, 9, 0, 0, 0, 0, 0, 0],
+  [0, 0, 1, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
 
-  [0, 5, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 1, 0, 0],
-  [0, 0, 6, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 2, 5, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
 
-  [0, 0, 0, 0, 0, 9, 0, 0, 0],
-  [0, 0, 0, 7, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
+
+// 기본 스도쿠 출력 넘버 배열
+const NUMBER_RESOURCES = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+// 옳은 값 컬러
+const CORRECT_COLOR = "#00772250";
+// 잘못된 값 컬러
+const WRONG_COLOR = "#84112270";
+// 호버링 컬러
+const HOVERING_COLOR = "#77777756";
+// 선택한 숫자 마킹 컬러
+const SELECTED_COLOR = "#84253240";
+// 선택한 숫자와 같은 수 마킹 컬러
+const SAME_NUMBER_MARK_COLOR = "#84253230";
+// 해당 숫자 모두 사용했을 때 컬러
+const EMPTY_NUMBER_COLOR = "#00000020";
+// 초기화 컬러
+const INITIAL_COLOR = "#000000";
+// stroke color
+const STROKE_COLOR = "#777777";
+// font size
+const FONT_SIZE = 16;
 
 const currentPoint = {
   x: 0,
@@ -39,7 +65,6 @@ const currentPoint = {
 window.addEventListener("mousemove", (e) => {
   const x = e.clientX;
   const y = e.clientY;
-  // rayPoint(x, y);
   currentPoint.x = x;
   currentPoint.y = y;
 });
@@ -56,75 +81,113 @@ const tileNumbers = new Map([
   [9, 9],
 ]);
 
-function tileCountUp(key) {
-  if (tileNumbers.get(key) < 9) {
-    tileNumbers.set(key, tileNumbers.get(key) + 1);
-  }
-}
+// 타일 카운터 복사본
+let tileNumberCompares = new Map(tileNumbers.entries());
+// 잘못된 값 좌표
+let wrongNumber = null;
+let wrongPlace = null;
+
 function tileCountDown(key) {
-  if (tileNumbers.get(key) > 0) {
-    tileNumbers.set(key, tileNumbers.get(key) - 1);
+  if (tileNumberCompares.get(key) > 0) {
+    tileNumberCompares.set(key, tileNumberCompares.get(key) - 1);
   }
 }
 
-function fillNumbers(list, suffle = false) {
-  // const temp = [];
+// 검증 완료
+function validation(list) {
+  tileNumberCompares = new Map(tileNumbers.entries());
   for (let i = 0; i < list.length; i++) {
-    // if (!temp[i]) {
-    //   temp[i] = [];
-    // }
     for (let j = 0; j < list[i].length; j++) {
-      // if (!temp[i][j]) {
-      //   temp[i][j] = 0;
-      // }
-      if (list[i][j] !== 0) {
+      if (list[i][j] > 0) {
         tileCountDown(list[i][j]);
-        continue;
-      } else {
-        const key =
-          (suffle
-            ? parseInt((Math.random() * tileNumbers.size).toString())
-            : j) + 1;
-        // console.log(key);
-        // console.log(i, j);
-        // console.log(isFitNumberInRow(i, key));
-        // console.log(isFitNumberInColumn(j, key));
-        const [rowFit, rowNumbers] = isFitNumberInRow(i, key);
-        const [columnFit, columnNumbers] = isFitNumberInColumn(j, key);
-        console.log(key, rowFit, rowNumbers, columnFit, columnNumbers);
-        if (rowFit && columnFit) {
-          // const count = tileNumbers.get(key) - 1;
-          // tileNumbers.set(key, count);
-          tileCountDown(key);
-          list[i][j] = key;
-        } else {
-          const sameNumber = findSameNumber(rowNumbers, columnNumbers);
-          if (sameNumber) {
-            tileCountDown(sameNumber);
-            list[i][j] = sameNumber;
-          }
-        }
       }
-      // return key;
+    }
+  }
+}
+
+// 랜덤 스도쿠 생성
+function fillNumbers(list, suffle = false) {
+  validation(list);
+  let numbers = NUMBER_RESOURCES;
+  for (let i = 0; i < list.length; i++) {
+    if (suffle && i > 0 && i % 3 === 0) {
+      numbers = numbers.slice(4).concat(numbers.slice(0, 4));
+    }
+    for (let j = 0; j < list[i].length; j++) {
+      list[i][j] = numbers[(j + i * 3) % 9];
+      tileCountDown(list[i][j]);
     }
   }
   return list;
-  // return list.map((row) =>
-  //   row.map((tile, i) => {
-  //     const key =
-  //       (suffle
-  //         ? parseInt((Math.random() * tileNumbers.size()).toString())
-  //         : i) + 1;
-  //     const count = tileNumbers.get(key) - 1;
-  //     tileNumbers.set(key, count);
-  //     return key;
-  //   })
-  // );
 }
 
-console.log(fillNumbers(tileList, true));
+// row 적합 검증
+function isCorrectInRow(y, number) {
+  // 에러처리 나중에
+  const isFitRow = !tileList[y].includes(number);
+  const restNumbers = substraction(tileList[y]);
+  return [isFitRow, restNumbers];
+}
+
+// column 적합 검증
+function isCorrectInColumn(x, number) {
+  const temp = [];
+  for (let tile of tileList) {
+    temp.push(tile[x]);
+  }
+  const isFitColumn = !temp.includes(number);
+  const restNumbers = substraction(temp);
+  return [isFitColumn, restNumbers];
+}
+
+// block 적합 검증
+function isCorrectInBlock(y, x, number) {
+  const temp = getBlock(y, x);
+  const isFitBlock = !temp.includes(number);
+  const restNumbers = substraction(temp);
+  return [isFitBlock, restNumbers];
+}
+
+// block 넘버 가져오기
+function getBlock(y, x) {
+  const convertY = parseInt((y / WIDTH).toString());
+  const convertX = parseInt((x / WIDTH).toString());
+  const temp = [];
+  for (let i = convertY * 3; i < (convertY + 1) * 3; i++) {
+    temp.push(tileList[i][convertX * 3]);
+    temp.push(tileList[i][convertX * 3 + 1]);
+    temp.push(tileList[i][convertX * 3 + 2]);
+  }
+  return temp;
+}
+
+function totalCorrectInPlace(y, x, number) {
+  const [isFitRow, rows] = isCorrectInRow(y, number);
+  const [isFitColumn, columns] = isCorrectInColumn(x, number);
+  const [isFitBlock, blocks] = isCorrectInBlock(y, x, number);
+  if (isFitRow && isFitColumn && isFitBlock) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// 배열 차집합
+function substraction(array) {
+  const temp = [];
+  for (let i of NUMBER_RESOURCES) {
+    if (!array.includes(i)) {
+      temp.push(i);
+    }
+  }
+  return temp;
+}
+
+// console.log(fillNumbers(tileList, true));
+// console.log(tileNumberCompares);
 
 function rayPoint() {
+  const PAD_FROM_RIGHT = canvas.width * 0.05;
   const left = canvas.width / 2 - (tileList.length / 2) * TILE_SIZE_X;
   const top = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
   const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
@@ -135,15 +198,24 @@ function rayPoint() {
   const indexY = parseInt(
     ((currentPoint.y - top) / (bottom - top)) * (HEIGHT * BLOCK_HEIGHT)
   );
-  // console.log(left, top)
-  // console.log(currentPoint.x, currentPoint.y)
+  // const indexSelectX = parseInt(
+  //   ((currentPoint.x - right + PAD_FROM_RIGHT) /
+  //     (right + PAD_FROM_RIGHT + TILE_SIZE_X - right + PAD_FROM_RIGHT)) *
+  //     (WIDTH * BLOCK_WIDTH)
+  // );
+  // const indexSelectY = parseInt(
+  //   ((currentPoint.y - top) / (bottom - top)) * (HEIGHT * BLOCK_HEIGHT)
+  // );
   if (
     left < currentPoint.x &&
     top < currentPoint.y &&
     right > currentPoint.x &&
     bottom > currentPoint.y
   ) {
-    ctx.fillStyle = "#77777756";
+    if (!onTile || onTile[0] !== indexX || onTile[1] !== indexY) {
+      onTile = [indexX, indexY];
+    }
+    ctx.fillStyle = HOVERING_COLOR;
     ctx.fillRect(
       Number(indexX) * TILE_SIZE_X +
         canvas.width / 2 -
@@ -154,90 +226,199 @@ function rayPoint() {
       TILE_SIZE_X,
       TILE_SIZE_Y
     );
-    ctx.fillStyle = "#000";
+
+    /* row marker */
+    ctx.fillRect(
+      left,
+      Number(indexY) * TILE_SIZE_Y +
+        canvas.height / 2 -
+        (tileList[0].length / 2) * TILE_SIZE_Y,
+      right - left,
+      TILE_SIZE_Y
+    );
+
+    /* column marker */
+    ctx.fillRect(
+      Number(indexX) * TILE_SIZE_X +
+        canvas.width / 2 -
+        (tileList.length / 2) * TILE_SIZE_X,
+      top,
+      TILE_SIZE_X,
+      bottom - top
+    );
+
+    ctx.fillStyle = INITIAL_COLOR;
+  }
+
+  // number pad select
+  if (
+    right + PAD_FROM_RIGHT < currentPoint.x &&
+    top < currentPoint.y &&
+    right + PAD_FROM_RIGHT + TILE_SIZE_X > currentPoint.x &&
+    bottom > currentPoint.y
+  ) {
+    // if (onSelectTile === null) {
+    onSelectTile = indexY;
+    // }
+    ctx.fillStyle = HOVERING_COLOR;
+    ctx.fillRect(
+      right + PAD_FROM_RIGHT,
+      Number(indexY) * TILE_SIZE_Y +
+        canvas.height / 2 -
+        (tileList[0].length / 2) * TILE_SIZE_Y,
+      TILE_SIZE_X,
+      TILE_SIZE_Y
+    );
+    ctx.fillStyle = INITIAL_COLOR;
+  } else {
+    if (onSelectTile !== null) {
+      onSelectTile = null;
+    }
+  }
+
+  // sudoku pad or numbers pad hovering action
+  if (
+    (left < currentPoint.x &&
+      top < currentPoint.y &&
+      right > currentPoint.x &&
+      bottom > currentPoint.y) ||
+    (right + PAD_FROM_RIGHT < currentPoint.x &&
+      top < currentPoint.y &&
+      right + PAD_FROM_RIGHT + TILE_SIZE_X > currentPoint.x &&
+      bottom > currentPoint.y)
+  ) {
     document.body.style.cursor = "pointer";
   } else {
     document.body.style.cursor = "inherit";
-  }
-}
-
-function getBlock(x, y) {
-  const temp = [];
-  for (let i = x * 3; i < (x + 1) * 3; i++) {
-    temp.push(tileList[i][y * 3]);
-    temp.push(tileList[i][y * 3 + 1]);
-    temp.push(tileList[i][y * 3 + 2]);
-  }
-  return temp;
-}
-
-console.log("block", isFullNumbers(getBlock(0, 0)));
-
-function findSameNumber(a, b) {
-  const max = a.length > b.length ? a : b;
-  const min = a.length < b.length ? a : b;
-
-  for (let i of max) {
-    if (min.includes(max[i])) {
-      return max[i];
+    if (onTile) {
+      onTile = null;
     }
   }
-  return null;
 }
 
-// y번 행에 숫자가 들어가도 되는지
-function isFitNumberInRow(y, number) {
-  const isFit = tileList[y].includes(number);
-  const numbers = tileList[y].filter((tile) => tile !== number);
-  return [isFit, numbers];
-}
-
-// x번 열에 숫자가 들어가도 되는지
-function isFitNumberInColumn(x, number) {
-  const numbers = [];
-  let isFit = true;
-  for (let row of tileList) {
-    if (row[x] !== number) {
-      numbers.push(row[x]);
-    } else {
-      isFit = false;
+function numberPad() {
+  const sortedNumbers = NUMBER_RESOURCES.sort();
+  const left = canvas.width / 2 - (tileList.length / 2) * TILE_SIZE_X;
+  const top = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
+  const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
+  const bottom = top + TILE_SIZE_Y * HEIGHT * BLOCK_HEIGHT;
+  const PAD_FROM_RIGHT = canvas.width * 0.05;
+  for (let index in sortedNumbers) {
+    const number = sortedNumbers[index];
+    if (tileNumberCompares.get(number) === 0) {
+      ctx.fillStyle = EMPTY_NUMBER_COLOR;
+      ctx.fillRect(
+        right + PAD_FROM_RIGHT,
+        top + TILE_SIZE_Y * index,
+        TILE_SIZE_X,
+        TILE_SIZE_Y
+      );
+      ctx.fillStyle = INITIAL_COLOR;
     }
+    ctx.strokeRect(
+      right + PAD_FROM_RIGHT,
+      top + TILE_SIZE_Y * index,
+      TILE_SIZE_X,
+      TILE_SIZE_Y
+    );
+    ctx.textAlign = "center";
+    ctx.font = `${FONT_SIZE}px bold`;
+    ctx.fillText(
+      number,
+      TILE_SIZE_X / 2 + right + PAD_FROM_RIGHT,
+      TILE_SIZE_Y / 2 + top + FONT_SIZE / 3 + TILE_SIZE_Y * index
+    );
+    ctx.font = `${FONT_SIZE - 6}px bold`;
+    ctx.fillText(
+      tileNumberCompares.get(number) + "개 남음",
+      TILE_SIZE_X / 2 + right + PAD_FROM_RIGHT + TILE_SIZE_X * 1.3,
+      TILE_SIZE_Y / 2 + top + FONT_SIZE / 3 + TILE_SIZE_Y * index
+    );
+    ctx.font = `${FONT_SIZE}px bold`;
   }
-  return [isFit, numbers];
 }
-
-// 숫자가 올바르게 가득 찼는지
-function isFullNumbers(array) {
-  return !array.reduce((acc, cur) => acc - cur, 45);
-}
-
-// y번 행에 모든 숫자가 올바르게 가득 찼는지
-function isCorrectRow(y = 0) {
-  // for (let row of tileList) {
-  return isFullNumbers(tileList[y]);
-  // }
-}
-
-// x번 열에 모든 숫자가 올바르게 가득 찼는지
-function isCorrectColumn(x = 0) {
-  const temp = [];
-  for (let row of tileList) {
-    temp.push(row[x]);
-  }
-  return isFullNumbers(temp);
-}
-
-// console.log(isCorrectRow(0));
-// console.log(isCorrectColumn(0));
-// console.log(isFitNumberInColumn(0, 5));
 
 function tiles() {
+  const baseX = canvas.width / 2 - (tileList.length / 2) * TILE_SIZE_X;
+  const baseY = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
+  const left = canvas.width / 2 - (tileList.length / 2) * TILE_SIZE_X;
+  const top = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
+  const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
+  const bottom = top + TILE_SIZE_Y * HEIGHT * BLOCK_HEIGHT;
+  // click marking
+  if (selected) {
+    ctx.fillStyle = SELECTED_COLOR;
+    ctx.fillRect(
+      selected[0] * TILE_SIZE_X + baseX,
+      selected[1] * TILE_SIZE_Y + baseY,
+      TILE_SIZE_X,
+      TILE_SIZE_Y
+    );
+    ctx.fillStyle = INITIAL_COLOR;
+  }
+
+  // if (wrongPlace) {
+  //   ctx.fillStyle = WRONG_COLOR;
+  //   /* row marker */
+  //   ctx.fillRect(
+  //     left,
+  //     Number(wrongPlace[0]) * TILE_SIZE_Y +
+  //       canvas.height / 2 -
+  //       (tileList[0].length / 2) * TILE_SIZE_Y,
+  //     right - left,
+  //     TILE_SIZE_Y
+  //   );
+
+  //   /* column marker */
+  //   ctx.fillRect(
+  //     Number(wrongPlace[1]) * TILE_SIZE_X +
+  //       canvas.width / 2 -
+  //       (tileList.length / 2) * TILE_SIZE_X,
+  //     top,
+  //     TILE_SIZE_X,
+  //     bottom - top
+  //   );
+  //   ctx.fillStyle = INITIAL_COLOR;
+  // }
+
   for (let y in tileList) {
     const row = tileList[y];
-    const baseX = canvas.width / 2 - (tileList.length / 2) * TILE_SIZE_X;
-    const baseY = canvas.height / 2 - (tileList[0].length / 2) * TILE_SIZE_Y;
-    const FONT_SIZE = 16;
+
+    // tie renlder
     for (let x in row) {
+      const tile = row[x];
+
+      /* wrong marker */
+      if (wrongNumber) {
+        if (row[x] === wrongNumber) {
+          ctx.fillStyle = WRONG_COLOR;
+          ctx.fillRect(
+            x * TILE_SIZE_X + baseX,
+            y * TILE_SIZE_Y + baseY,
+            TILE_SIZE_X,
+            TILE_SIZE_Y
+          );
+          ctx.fillStyle = INITIAL_COLOR;
+        }
+      }
+
+      /* selected marker */
+      if (
+        selected &&
+        row[x] !== 0 &&
+        row[x] === tileList[selected[1]][selected[0]]
+      ) {
+        ctx.fillStyle = SAME_NUMBER_MARK_COLOR;
+        ctx.fillRect(
+          x * TILE_SIZE_X + baseX,
+          y * TILE_SIZE_Y + baseY,
+          TILE_SIZE_X,
+          TILE_SIZE_Y
+        );
+        ctx.fillStyle = INITIAL_COLOR;
+      }
+
+      /* 3x3 block outline */
       if (x % 3 === 0 && y % 3 === 0) {
         ctx.strokeRect(
           parseInt(x / 3) - 1 + baseX + x * TILE_SIZE_X,
@@ -246,26 +427,30 @@ function tiles() {
           TILE_SIZE_Y * 3
         );
       }
-      const tile = row[x];
-      ctx.strokeStyle = "#777";
+
+      /* each tile outline */
+      ctx.strokeStyle = STROKE_COLOR;
       ctx.strokeRect(
         x * TILE_SIZE_X + baseX,
         y * TILE_SIZE_Y + baseY,
         TILE_SIZE_X,
         TILE_SIZE_Y
       );
+
+      /* text in tile */
       if (tile !== 0) {
-        ctx.strokeStyle = "#000";
+        ctx.strokeStyle = INITIAL_COLOR;
         ctx.fillText(
           tile,
-          x * TILE_SIZE_X + baseX + TILE_SIZE_X / 2 - FONT_SIZE / 4,
-          y * TILE_SIZE_Y + baseY + TILE_SIZE_Y / 2 + FONT_SIZE / 4
+          x * TILE_SIZE_X + baseX + TILE_SIZE_X / 2,
+          y * TILE_SIZE_Y + baseY + TILE_SIZE_Y / 2 + FONT_SIZE / 3
         );
         ctx.font = `${FONT_SIZE}px bold`;
       }
     }
   }
-  rayPoint();
+  /* validation for tile counter */
+  validation(tileList);
 }
 
 function clearBoard() {
@@ -277,7 +462,9 @@ function render(time) {
   requestAnimationFrame(render);
 
   clearBoard();
+  rayPoint();
   tiles();
+  numberPad();
 }
 requestAnimationFrame(render);
 
@@ -288,4 +475,39 @@ canvas.height = innerHeight;
 window.addEventListener("resize", (e) => {
   canvas.width = innerWidth;
   canvas.height = innerHeight;
+});
+window.addEventListener("click", (e) => {
+  // const target = e.target;
+  try {
+    if (onSelectTile !== null) {
+      const [x, y] = selected;
+      const newTile = NUMBER_RESOURCES[onSelectTile];
+      if (totalCorrectInPlace(y, x, newTile) || newTile === tileList[y][x]) {
+        tileList[y][x] = newTile;
+        onSelectTile = null;
+        selected = null;
+        wrongNumber = null;
+        wrongPlace = null;
+      } else {
+        console.log("잘못된 수");
+        wrongNumber = newTile;
+        wrongPlace = [y, x];
+        onSelectTile = null;
+      }
+    }
+
+    if (onTile) {
+      // console.log("tile click", onTile, tileList[y][x]);
+      selected = onTile;
+      console.log(selected);
+      wrongNumber = null;
+      wrongPlace = null;
+    } else {
+      if (onSelectTile) {
+        selected = null;
+      }
+    }
+  } catch (e) {
+    console.log("에러 확인");
+  }
 });
