@@ -8,6 +8,9 @@ import {
   HOVERING_COLOR,
   INITIAL_COLOR,
   INSERT_WRONG_LIMIT,
+  max,
+  mid,
+  min,
   NUMBER_RESOURCES,
   on,
   PAD_RATIO,
@@ -31,12 +34,18 @@ export class RayPoint {
   }
   render(sudoku) {
     this.sudoku = sudoku;
+    const resizeRatio =
+      canvas.width >= 768
+        ? max
+        : canvas.width < 768 && canvas.width >= 594
+        ? mid
+        : min;
     const PAD_FROM_RIGHT = canvas.width * PAD_RATIO;
-    const left = canvas.width / 2 - (sudoku.rows.length / 2) * TILE_SIZE_X;
+    const left = canvas.width / 2 - (sudoku.rows.length / 2) * TILE_SIZE_X*resizeRatio;
     const top =
-      canvas.height / 2 - (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y;
-    const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
-    const bottom = top + TILE_SIZE_Y * HEIGHT * BLOCK_HEIGHT;
+      canvas.height / 2 - (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y*resizeRatio;
+    const right = left + TILE_SIZE_X*resizeRatio * WIDTH * BLOCK_WIDTH;
+    const bottom = top + TILE_SIZE_Y*resizeRatio * HEIGHT * BLOCK_HEIGHT;
     const indexX = parseInt(
       ((this.currentPoint.x - left) / (right - left)) * (WIDTH * BLOCK_WIDTH)
     );
@@ -54,33 +63,33 @@ export class RayPoint {
       }
       ctx.fillStyle = HOVERING_COLOR;
       ctx.fillRect(
-        Number(indexX) * TILE_SIZE_X +
+        Number(indexX) * TILE_SIZE_X*resizeRatio +
           canvas.width / 2 -
-          (sudoku.rows.length / 2) * TILE_SIZE_X,
-        Number(indexY) * TILE_SIZE_Y +
+          (sudoku.rows.length / 2) * TILE_SIZE_X*resizeRatio,
+        Number(indexY) * TILE_SIZE_Y*resizeRatio +
           canvas.height / 2 -
-          (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y,
-        TILE_SIZE_X,
-        TILE_SIZE_Y
+          (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y*resizeRatio,
+        TILE_SIZE_X*resizeRatio,
+        TILE_SIZE_Y*resizeRatio
       );
 
       /* row marker */
       ctx.fillRect(
         left,
-        Number(indexY) * TILE_SIZE_Y +
+        Number(indexY) * TILE_SIZE_Y*resizeRatio +
           canvas.height / 2 -
-          (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y,
+          (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y*resizeRatio,
         right - left,
-        TILE_SIZE_Y
+        TILE_SIZE_Y*resizeRatio
       );
 
       /* column marker */
       ctx.fillRect(
-        Number(indexX) * TILE_SIZE_X +
+        Number(indexX) * TILE_SIZE_X*resizeRatio +
           canvas.width / 2 -
-          (sudoku.rows.length / 2) * TILE_SIZE_X,
+          (sudoku.rows.length / 2) * TILE_SIZE_X*resizeRatio,
         top,
-        TILE_SIZE_X,
+        TILE_SIZE_X*resizeRatio,
         bottom - top
       );
 
@@ -91,7 +100,7 @@ export class RayPoint {
     if (
       right + PAD_FROM_RIGHT < this.currentPoint.x &&
       top < this.currentPoint.y &&
-      right + PAD_FROM_RIGHT + TILE_SIZE_X > this.currentPoint.x &&
+      right + PAD_FROM_RIGHT + TILE_SIZE_X*resizeRatio > this.currentPoint.x &&
       bottom > this.currentPoint.y
     ) {
       // if (on.selectTile === null) {
@@ -100,11 +109,11 @@ export class RayPoint {
       ctx.fillStyle = HOVERING_COLOR;
       ctx.fillRect(
         right + PAD_FROM_RIGHT,
-        Number(indexY) * TILE_SIZE_Y +
+        Number(indexY) * TILE_SIZE_Y*resizeRatio +
           canvas.height / 2 -
-          (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y,
-        TILE_SIZE_X,
-        TILE_SIZE_Y
+          (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y*resizeRatio,
+        TILE_SIZE_X*resizeRatio,
+        TILE_SIZE_Y*resizeRatio
       );
       ctx.fillStyle = INITIAL_COLOR;
     } else {
@@ -115,10 +124,10 @@ export class RayPoint {
 
     /* detect delection button */
     if (
-      right + PAD_FROM_RIGHT - TILE_SIZE_X < this.currentPoint.x &&
+      right + PAD_FROM_RIGHT - TILE_SIZE_X*resizeRatio < this.currentPoint.x &&
       top < this.currentPoint.y &&
       right + PAD_FROM_RIGHT > this.currentPoint.x &&
-      top + TILE_SIZE_Y > this.currentPoint.y
+      top + TILE_SIZE_Y*resizeRatio > this.currentPoint.y
     ) {
       if (!on.deletion) {
         on.deletion = true;
@@ -135,12 +144,12 @@ export class RayPoint {
         bottom > this.currentPoint.y) ||
       (right + PAD_FROM_RIGHT < this.currentPoint.x &&
         top < this.currentPoint.y &&
-        right + PAD_FROM_RIGHT + TILE_SIZE_X > this.currentPoint.x &&
+        right + PAD_FROM_RIGHT + TILE_SIZE_X*resizeRatio > this.currentPoint.x &&
         bottom > this.currentPoint.y) ||
-      (right + PAD_FROM_RIGHT - TILE_SIZE_X < this.currentPoint.x &&
+      (right + PAD_FROM_RIGHT - TILE_SIZE_X*resizeRatio < this.currentPoint.x &&
         top < this.currentPoint.y &&
         right + PAD_FROM_RIGHT > this.currentPoint.x &&
-        top + TILE_SIZE_Y > this.currentPoint.y)
+        top + TILE_SIZE_Y*resizeRatio > this.currentPoint.y)
     ) {
       document.body.style.cursor = "pointer";
     } else {
@@ -159,7 +168,6 @@ export class RayPoint {
         correct.number = null;
         correct.place = null;
       }
-			console.log(on.tile)
       if (on.selectTile !== null) {
         const [x, y] = on.selected;
         const newTile = NUMBER_RESOURCES[on.selectTile];
@@ -300,6 +308,20 @@ export class RayPoint {
         }
       } catch (e) {
         console.log("에러 확인", e);
+      }
+    } else if (key === "Backspace") {
+      if (on.selected) {
+        const target = this.sudoku.rows[on.selected[1]].tiles[on.selected[0]];
+        if (target.origin) {
+          alert(WARNING_COMMENT);
+        } else {
+          target.deleteNumber();
+          on.deletion = false;
+          on.selected = null;
+          on.selectTile = null;
+          wrong.number = null;
+          wrong.place = null;
+        }
       }
     }
   }

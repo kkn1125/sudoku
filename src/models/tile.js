@@ -1,10 +1,14 @@
 export class Tile {
+  staticNum = 0;
   number = 0;
   origin = false;
   memo = [];
-  constructor(number = 0, origin = false) {
+  hide = false;
+  constructor(number = 0, origin = false, hide = false) {
+    this.staticNum = number;
     this.number = number;
     this.origin = origin;
+    this.hide = hide;
   }
   copy(oldTile) {
     this.number = oldTile.number;

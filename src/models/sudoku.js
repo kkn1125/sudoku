@@ -10,6 +10,9 @@ import {
   HEIGHT,
   INITIAL_COLOR,
   INSERT_WRONG_LIMIT,
+  max,
+  mid,
+  min,
   NEW_VALUE_COLOR,
   NUMBER_RESOURCES,
   on,
@@ -25,33 +28,45 @@ import {
   WRONG_COLOR,
 } from "../utils/tools";
 import { Row } from "./row";
+import { Tile } from "./tile";
 
 class NumberPad {
   render(sudoku) {
+    const resizeRatio =
+      canvas.width >= 768
+        ? max
+        : canvas.width < 768 && canvas.width >= 594
+        ? mid
+        : min;
     try {
       const sortedNumbers = NUMBER_RESOURCES.sort();
-      const left = canvas.width / 2 - (sudoku.rows.length / 2) * TILE_SIZE_X;
+      const left =
+        canvas.width / 2 - (sudoku.rows.length / 2) * TILE_SIZE_X * resizeRatio;
       const top =
-        canvas.height / 2 - (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y;
-      const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
-      const bottom = top + TILE_SIZE_Y * HEIGHT * BLOCK_HEIGHT;
+        canvas.height / 2 -
+        (sudoku.rows[0].tiles.length / 2) * TILE_SIZE_Y * resizeRatio;
+      const right = left + TILE_SIZE_X * resizeRatio * WIDTH * BLOCK_WIDTH;
+      const bottom = top + TILE_SIZE_Y * resizeRatio * HEIGHT * BLOCK_HEIGHT;
       // 숫자 패드 스도쿠 간격 조절
       const PAD_FROM_RIGHT = canvas.width * 0.06;
       // number delete button
       ctx.fillStyle = WRONG_COLOR;
       ctx.fillRect(
-        right + PAD_FROM_RIGHT - TILE_SIZE_X,
+        right + PAD_FROM_RIGHT - TILE_SIZE_X * resizeRatio,
         top,
-        TILE_SIZE_X,
-        TILE_SIZE_Y
+        TILE_SIZE_X * resizeRatio,
+        TILE_SIZE_Y * resizeRatio
       );
       ctx.fillStyle = INITIAL_COLOR;
       ctx.textAlign = "center";
       ctx.font = `${FONT_SIZE}px bold`;
       ctx.fillText(
         "❌",
-        right + PAD_FROM_RIGHT - TILE_SIZE_X + TILE_SIZE_X / 2,
-        top + TILE_SIZE_Y / 2 + FONT_SIZE / 3
+        right +
+          PAD_FROM_RIGHT -
+          TILE_SIZE_X * resizeRatio +
+          (TILE_SIZE_X * resizeRatio) / 2,
+        top + (TILE_SIZE_Y * resizeRatio) / 2 + FONT_SIZE / 3
       );
       ctx.font = `${FONT_SIZE - 6}px bold`;
 
@@ -62,30 +77,39 @@ class NumberPad {
           ctx.fillStyle = EMPTY_NUMBER_COLOR;
           ctx.fillRect(
             right + PAD_FROM_RIGHT,
-            top + TILE_SIZE_Y * index,
-            TILE_SIZE_X,
-            TILE_SIZE_Y
+            top + TILE_SIZE_Y * resizeRatio * index,
+            TILE_SIZE_X * resizeRatio,
+            TILE_SIZE_Y * resizeRatio
           );
           ctx.fillStyle = INITIAL_COLOR;
         }
         ctx.strokeRect(
           right + PAD_FROM_RIGHT,
-          top + TILE_SIZE_Y * index,
-          TILE_SIZE_X,
-          TILE_SIZE_Y
+          top + TILE_SIZE_Y * resizeRatio * index,
+          TILE_SIZE_X * resizeRatio,
+          TILE_SIZE_Y * resizeRatio
         );
         ctx.textAlign = "center";
         ctx.font = `${FONT_SIZE}px bold`;
         ctx.fillText(
           number,
-          TILE_SIZE_X / 2 + right + PAD_FROM_RIGHT,
-          TILE_SIZE_Y / 2 + top + FONT_SIZE / 3 + TILE_SIZE_Y * index
+          (TILE_SIZE_X * resizeRatio) / 2 + right + PAD_FROM_RIGHT,
+          (TILE_SIZE_Y * resizeRatio) / 2 +
+            top +
+            FONT_SIZE / 3 +
+            TILE_SIZE_Y * resizeRatio * index
         );
         ctx.font = `${FONT_SIZE - 6}px bold`;
         ctx.fillText(
           tileNumberCompares.get(number) + "개 남음",
-          TILE_SIZE_X / 2 + right + PAD_FROM_RIGHT + TILE_SIZE_X * 1.3,
-          TILE_SIZE_Y / 2 + top + FONT_SIZE / 3 + TILE_SIZE_Y * index
+          (TILE_SIZE_X * resizeRatio) / 2 +
+            right +
+            PAD_FROM_RIGHT +
+            TILE_SIZE_X * resizeRatio * 1.3,
+          (TILE_SIZE_Y * resizeRatio) / 2 +
+            top +
+            FONT_SIZE / 3 +
+            TILE_SIZE_Y * resizeRatio * index
         );
         ctx.font = `${FONT_SIZE}px bold`;
       }
@@ -127,6 +151,40 @@ export class Sudoku {
     );
   }
 
+  static randomSources() {
+    const array = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    return Sudoku.sorting(array);
+  }
+  static sorting(array) {
+    return array.sort(() =>
+      parseInt((Math.random() * 9).toString()) % 3 == 0 ? 1 : -1
+    );
+  }
+  static randomize(array) {
+    // return array.sort(() =>
+    //   parseInt((Math.random() * 9).toString()) % 3 == 0 ? 1 : -1
+    // );
+    console.log(123);
+    const suffle1 = array
+      .slice(3, 6)
+      .concat(...array.slice(0, 3))
+      .concat(...array.slice(6, 9));
+    for (let i in suffle1) {
+      for (let j in suffle1[i]) {
+        if (j % 3 === 0) {
+          let temp = suffle1[i].tiles[j];
+          suffle1[i].tiles[j] = suffle1[i * 3 + 2];
+          suffle1[i * 3 + 2] = temp;
+        }
+      }
+      suffle1[i].tiles = suffle1[i].tiles
+        .slice(3, 6)
+        .concat(...suffle1[i].tiles.slice(0, 3))
+        .concat(...suffle1[i].tiles.slice(6, 9));
+    }
+    return suffle1;
+  }
+
   // 게임 초기화
   initialize(newSdoku) {
     const copy = Sudoku.deepCopy(newSdoku);
@@ -143,17 +201,82 @@ export class Sudoku {
     wrong.count = 0;
   }
 
-  // 랜덤 스도쿠 생성
-  fillNumbers(suffle = false) {
-    let numbers = NUMBER_RESOURCES;
+  fillRandoms() {
+    const temp = new Map([
+      [1, 9],
+      [2, 9],
+      [3, 9],
+      [4, 9],
+      [5, 9],
+      [6, 9],
+      [7, 9],
+      [8, 9],
+      [9, 9],
+    ]);
+    console.log(123);
+    const filter = () =>
+      Array.from(temp.entries())
+        .filter(([a, b]) => b > 0)
+        .map(([a]) => a);
+    let filtered = filter();
+    let randomKey =
+      filtered[parseInt((Math.random() * filtered.length).toString())];
+    const loopCount = 1;
     for (let i = 0; i < this.rows.length; i++) {
-      if (suffle && i > 0 && i % 3 === 0) {
+      for (let j = 0; j < this.rows[i].tiles.length; j++) {
+        if (this.rows[i].tiles[j] > 0) continue;
+        if (this.totalCorrectInPlace(i, j, randomKey)) {
+          if (temp.get(randomKey) > 0) {
+            this.rows[i].tiles[j] = new Tile(randomKey, true);
+            temp.set(randomKey, temp.get(randomKey) - 1);
+          } else {
+            continue;
+          }
+        } else {
+          continue;
+        }
+      }
+      // filtered = filter();
+      // randomKey =
+      //   filtered[parseInt((Math.random() * filtered.length).toString())];
+    }
+    // for (let i in this.rows) {
+    //   for (let j in this.rows[i].tiles) {
+    //     const random1 = this.getCorrectNumber(i, j);
+    //     // const random2 = this.getCorrectNumber(j, i);
+    //     this.rows[i].tiles[j] = new Tile(random1, random1 > 0);
+    //     this.rows[8 - i].tiles[8 - j] = new Tile(random1, random1 > 0);
+    //   }
+    // }
+    return this;
+  }
+
+  getCorrectNumber(y, x) {
+    const temp = [];
+    for (let number = 1; number <= 9; number++) {
+      const isCorrect = this.totalCorrectInPlace(y, x, number);
+      if (isCorrect) {
+        temp.push(number);
+      }
+    }
+    const randNum = parseInt((Math.random() * temp.length).toString());
+    return temp.splice(randNum)[0];
+  }
+
+  // 랜덤 스도쿠 생성
+  fillNumbers(source, suffle = false) {
+    let numbers = source || NUMBER_RESOURCES;
+    for (let i = 0; i < this.rows.length; i++) {
+      if (i > 0 && i % 3 === 0) {
         numbers = numbers.slice(4).concat(numbers.slice(0, 4));
       }
       for (let j = 0; j < this.rows[i].tiles.length; j++) {
-        this.rows[i].tiles[j] = numbers[(j + i * 3) % 9];
-        tileCountDown(this.rows[i].tiles[j]);
+        this.rows[i].tiles[j] = new Tile(numbers[(j + i * 3) % 9], true);
+        this.tileCountDown(this.rows[i].tiles[j]);
       }
+    }
+    if (suffle) {
+      this.rows = Sudoku.randomize(this.rows);
     }
     return this;
   }
@@ -219,23 +342,33 @@ export class Sudoku {
 
   // 타일 렌더
   render() {
-    const baseX = canvas.width / 2 - (this.rows.length / 2) * TILE_SIZE_X;
+    const resizeRatio =
+      canvas.width >= 768
+        ? max
+        : canvas.width < 768 && canvas.width >= 594
+        ? mid
+        : min;
+    const baseX =
+      canvas.width / 2 - (this.rows.length / 2) * TILE_SIZE_X * resizeRatio;
     const baseY =
-      canvas.height / 2 - (this.rows[0].tiles.length / 2) * TILE_SIZE_Y;
-    const left = canvas.width / 2 - (this.rows.length / 2) * TILE_SIZE_X;
+      canvas.height / 2 -
+      (this.rows[0].tiles.length / 2) * TILE_SIZE_Y * resizeRatio;
+    const left =
+      canvas.width / 2 - (this.rows.length / 2) * TILE_SIZE_X * resizeRatio;
     const top =
-      canvas.height / 2 - (this.rows[0].tiles.length / 2) * TILE_SIZE_Y;
-    const right = left + TILE_SIZE_X * WIDTH * BLOCK_WIDTH;
-    const bottom = top + TILE_SIZE_Y * HEIGHT * BLOCK_HEIGHT;
+      canvas.height / 2 -
+      (this.rows[0].tiles.length / 2) * TILE_SIZE_Y * resizeRatio;
+    const right = left + TILE_SIZE_X * resizeRatio * WIDTH * BLOCK_WIDTH;
+    const bottom = top + TILE_SIZE_Y * resizeRatio * HEIGHT * BLOCK_HEIGHT;
 
     // click marking
     if (on.selected) {
       ctx.fillStyle = SELECTED_COLOR;
       ctx.fillRect(
-        on.selected[0] * TILE_SIZE_X + baseX,
-        on.selected[1] * TILE_SIZE_Y + baseY,
-        TILE_SIZE_X,
-        TILE_SIZE_Y
+        on.selected[0] * TILE_SIZE_X * resizeRatio + baseX,
+        on.selected[1] * TILE_SIZE_Y * resizeRatio + baseY,
+        TILE_SIZE_X * resizeRatio,
+        TILE_SIZE_Y * resizeRatio
       );
       ctx.fillStyle = INITIAL_COLOR;
     }
@@ -243,10 +376,10 @@ export class Sudoku {
     if (correct.number && correct.place) {
       ctx.fillStyle = CORRECT_COLOR;
       ctx.fillRect(
-        correct.place[1] * TILE_SIZE_X + baseX,
-        correct.place[0] * TILE_SIZE_Y + baseY,
-        TILE_SIZE_X,
-        TILE_SIZE_Y
+        correct.place[1] * TILE_SIZE_X * resizeRatio + baseX,
+        correct.place[0] * TILE_SIZE_Y * resizeRatio + baseY,
+        TILE_SIZE_X * resizeRatio,
+        TILE_SIZE_Y * resizeRatio
       );
       ctx.fillStyle = INITIAL_COLOR;
     }
@@ -257,20 +390,20 @@ export class Sudoku {
       /* row marker */
       ctx.fillRect(
         left,
-        Number(wrong.place[0]) * TILE_SIZE_Y +
+        Number(wrong.place[0]) * TILE_SIZE_Y * resizeRatio +
           canvas.height / 2 -
-          (this.rows[0].tiles.length / 2) * TILE_SIZE_Y,
+          (this.rows[0].tiles.length / 2) * TILE_SIZE_Y * resizeRatio,
         right - left,
-        TILE_SIZE_Y
+        TILE_SIZE_Y * resizeRatio
       );
 
       /* column marker */
       ctx.fillRect(
-        Number(wrong.place[1]) * TILE_SIZE_X +
+        Number(wrong.place[1]) * TILE_SIZE_X * resizeRatio +
           canvas.width / 2 -
-          (this.rows.length / 2) * TILE_SIZE_X,
+          (this.rows.length / 2) * TILE_SIZE_X * resizeRatio,
         top,
-        TILE_SIZE_X,
+        TILE_SIZE_X * resizeRatio,
         bottom - top
       );
       ctx.fillStyle = INITIAL_COLOR;
@@ -288,10 +421,10 @@ export class Sudoku {
           if (row.tiles[x].number === wrong.number) {
             ctx.fillStyle = WRONG_COLOR;
             ctx.fillRect(
-              x * TILE_SIZE_X + baseX,
-              y * TILE_SIZE_Y + baseY,
-              TILE_SIZE_X,
-              TILE_SIZE_Y
+              x * TILE_SIZE_X * resizeRatio + baseX,
+              y * TILE_SIZE_Y * resizeRatio + baseY,
+              TILE_SIZE_X * resizeRatio,
+              TILE_SIZE_Y * resizeRatio
             );
             ctx.fillStyle = INITIAL_COLOR;
           }
@@ -306,10 +439,10 @@ export class Sudoku {
         ) {
           ctx.fillStyle = SAME_NUMBER_MARK_COLOR;
           ctx.fillRect(
-            x * TILE_SIZE_X + baseX,
-            y * TILE_SIZE_Y + baseY,
-            TILE_SIZE_X,
-            TILE_SIZE_Y
+            x * TILE_SIZE_X * resizeRatio + baseX,
+            y * TILE_SIZE_Y * resizeRatio + baseY,
+            TILE_SIZE_X * resizeRatio,
+            TILE_SIZE_Y * resizeRatio
           );
           ctx.fillStyle = INITIAL_COLOR;
         }
@@ -317,20 +450,20 @@ export class Sudoku {
         /* 3x3 block outline */
         if (x % 3 === 0 && y % 3 === 0) {
           ctx.strokeRect(
-            parseInt(x / 3) - 1 + baseX + x * TILE_SIZE_X,
-            parseInt(y / 3) - 1 + baseY + y * TILE_SIZE_Y,
-            TILE_SIZE_X * 3,
-            TILE_SIZE_Y * 3
+            parseInt(x / 3) - 1 + baseX + x * TILE_SIZE_X * resizeRatio,
+            parseInt(y / 3) - 1 + baseY + y * TILE_SIZE_Y * resizeRatio,
+            TILE_SIZE_X * resizeRatio * 3,
+            TILE_SIZE_Y * resizeRatio * 3
           );
         }
 
         /* each tile outline */
         ctx.strokeStyle = STROKE_COLOR;
         ctx.strokeRect(
-          x * TILE_SIZE_X + baseX,
-          y * TILE_SIZE_Y + baseY,
-          TILE_SIZE_X,
-          TILE_SIZE_Y
+          x * TILE_SIZE_X * resizeRatio + baseX,
+          y * TILE_SIZE_Y * resizeRatio + baseY,
+          TILE_SIZE_X * resizeRatio,
+          TILE_SIZE_Y * resizeRatio
         );
 
         /* text in tile */
@@ -338,8 +471,13 @@ export class Sudoku {
           ctx.fillStyle = tile.origin ? INITIAL_COLOR : NEW_VALUE_COLOR;
           ctx.fillText(
             tile.number,
-            x * TILE_SIZE_X + baseX + TILE_SIZE_X / 2,
-            y * TILE_SIZE_Y + baseY + TILE_SIZE_Y / 2 + FONT_SIZE / 3
+            x * TILE_SIZE_X * resizeRatio +
+              baseX +
+              (TILE_SIZE_X * resizeRatio) / 2,
+            y * TILE_SIZE_Y * resizeRatio +
+              baseY +
+              (TILE_SIZE_Y * resizeRatio) / 2 +
+              FONT_SIZE / 3
           );
           ctx.font = `${FONT_SIZE}px bold`;
         }

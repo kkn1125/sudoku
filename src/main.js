@@ -9,18 +9,21 @@ const currentPoint = {
   y: 0,
 };
 const sudoku = new Sudoku(
-  [0, 0, 1, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0],
 
   [0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 2, 5, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0],
 
   [0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0]
-);
+)
+.fillNumbers(Sudoku.randomSources(), true);
+// .fillRandoms();
+
 const raypoint = new RayPoint();
 const saveSudoku = Sudoku.deepCopy(sudoku);
 

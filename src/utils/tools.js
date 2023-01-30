@@ -60,6 +60,11 @@ export const tileNumbers = new Map([
   [9, 9],
 ]);
 
+/* resize ratio values */
+export const max = 1;
+export const mid = 0.8;
+export const min = 0.6;
+
 // 타일 카운터 복사본
 export const tileNumberCompares = new Map(tileNumbers.entries());
 
