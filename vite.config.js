@@ -21,5 +21,6 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
         usePolling: true,
       },
     },
+    base: "",
   };
 });
