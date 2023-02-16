@@ -22,7 +22,12 @@ export class Tile {
   deleteNumber() {
     this.number = 0;
   }
-
+  setHide() {
+    this.hide = true;
+  }
+  setShow() {
+    this.hide = false;
+  }
   setMemo(number) {
     if (!this.memo.includes(number)) this.memo.push(number);
   }

@@ -144,11 +144,23 @@ export class Sudoku {
   rows = [];
   numberPad = new NumberPad();
   scoreBoard = new ScoreBoard();
+  level = {
+    newbie: 40,
+    low: 30,
+    middel: 20,
+    high: 10,
+  };
+  currentLevel = "newbie";
 
   constructor(...rows) {
     this.rows.push(
       ...rows.map((row) => (row instanceof Row ? row : new Row(...row)))
     );
+    this.setLevel();
+  }
+
+  setLevel(level = "newbie") {
+    this.currentLevel = level;
   }
 
   static randomSources() {
@@ -199,6 +211,12 @@ export class Sudoku {
     wrong.number = null;
     wrong.place = null;
     wrong.count = 0;
+    this.level = {
+      newbie: 40,
+      low: 30,
+      middel: 20,
+      high: 10,
+    };
   }
 
   fillRandoms() {
@@ -265,14 +283,26 @@ export class Sudoku {
 
   // 랜덤 스도쿠 생성
   fillNumbers(source, suffle = false) {
+    const currentLevel = this.currentLevel;
     let numbers = source || NUMBER_RESOURCES;
     for (let i = 0; i < this.rows.length; i++) {
       if (i > 0 && i % 3 === 0) {
         numbers = numbers.slice(4).concat(numbers.slice(0, 4));
       }
       for (let j = 0; j < this.rows[i].tiles.length; j++) {
-        this.rows[i].tiles[j] = new Tile(numbers[(j + i * 3) % 9], true);
-        this.tileCountDown(this.rows[i].tiles[j]);
+        let rand = parseInt(
+          Math.random() * (this.rows.length * this.rows[i].tiles.length)
+        );
+        const isNotZero = rand % 2 === 0;
+        this.rows[i].tiles[j] = new Tile(
+          numbers[(j + i * 3) % 9],
+          this.level[currentLevel] > 0 ? !isNotZero : true,
+          this.level[currentLevel] > 0 ? isNotZero : false
+        );
+        // this.tileCountDown(this.rows[i].tiles[j]);
+        if (this.level[currentLevel] > 0) {
+          this.level[currentLevel] -= 1;
+        }
       }
     }
     if (suffle) {
@@ -412,7 +442,7 @@ export class Sudoku {
     for (let y in this.rows) {
       const row = this.rows[y];
 
-      // tie renlder
+      // tile render
       for (let x in row.tiles) {
         const tile = row.tiles[x];
 
@@ -431,21 +461,31 @@ export class Sudoku {
         }
 
         /* on.selected marker */
+        // row와 this.rows의 hide를 크로스체크해야 숨겨진 넘버 셀렉트 하지 않음
         if (
           on.selected &&
-          row.tiles[x].number !== 0 &&
-          row.tiles[x].number ===
-            this.rows[on.selected[1]].tiles[on.selected[0]].number
+          !this.rows[on.selected[1]].tiles[on.selected[0]].hide &&
+          !row.tiles[x].hide
         ) {
-          ctx.fillStyle = SAME_NUMBER_MARK_COLOR;
-          ctx.fillRect(
-            x * TILE_SIZE_X * resizeRatio + baseX,
-            y * TILE_SIZE_Y * resizeRatio + baseY,
-            TILE_SIZE_X * resizeRatio,
-            TILE_SIZE_Y * resizeRatio
-          );
-          ctx.fillStyle = INITIAL_COLOR;
+          if (
+            on.selected &&
+            row.tiles[x].number !== 0 &&
+            row.tiles[x].number ===
+              this.rows[on.selected[1]].tiles[on.selected[0]].number
+          ) {
+            ctx.fillStyle = SAME_NUMBER_MARK_COLOR;
+            ctx.fillRect(
+              x * TILE_SIZE_X * resizeRatio + baseX,
+              y * TILE_SIZE_Y * resizeRatio + baseY,
+              TILE_SIZE_X * resizeRatio,
+              TILE_SIZE_Y * resizeRatio
+            );
+            ctx.fillStyle = INITIAL_COLOR;
+          }
         }
+        // if (on.selected) {
+        //   console.log(this.rows[on.selected[1]].tiles[on.selected[0]]);
+        // }
 
         /* 3x3 block outline */
         if (x % 3 === 0 && y % 3 === 0) {
@@ -466,6 +506,8 @@ export class Sudoku {
           TILE_SIZE_Y * resizeRatio
         );
 
+        // text hide
+        if (tile.hide) continue;
         /* text in tile */
         if (tile.number !== 0) {
           ctx.fillStyle = tile.origin ? INITIAL_COLOR : NEW_VALUE_COLOR;
@@ -494,7 +536,7 @@ export class Sudoku {
     }
     for (let i = 0; i < list.rows.length; i++) {
       for (let j = 0; j < list.rows[i].tiles.length; j++) {
-        if (list.rows[i].tiles[j].number > 0) {
+        if (list.rows[i].tiles[j].number > 0 && !list.rows[i].tiles[j].hide) {
           this.tileCountDown(list.rows[i].tiles[j].number);
         }
       }
